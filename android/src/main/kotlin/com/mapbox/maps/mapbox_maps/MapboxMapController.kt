@@ -5,6 +5,8 @@ import android.view.View
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
 import com.mapbox.common.*
+import com.mapbox.mapboxsdk.maps.MapView
+import com.mapbox.mapboxsdk.maps.MapboxMap
 import com.mapbox.maps.*
 import com.mapbox.maps.mapbox_maps.annotation.AnnotationController
 import com.mapbox.maps.pigeons.FLTMapInterfaces
@@ -27,7 +29,7 @@ class MapboxMapController(
   MethodChannel.MethodCallHandler {
 
   private val mapView: MapView = MapView(context, mapInitOptions)
-  private val mapboxMap: MapboxMap = mapView.getMapboxMap()
+  private val mapboxMap: MapboxMap = mapView?.getMapboxMap()
   private val methodChannel: MethodChannel
   private val styleController: StyleController = StyleController(mapboxMap)
   private val cameraController: CameraController = CameraController(mapboxMap)

@@ -4,57 +4,65 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import com.mapbox.bindgen.Value
 import com.mapbox.common.Logger
+import com.mapbox.mapboxsdk.maps.MapboxMap
+import com.mapbox.mapboxsdk.maps.extension.localization.localizeLabels
+import com.mapbox.mapboxsdk.style.expressions.Expression
+import com.mapbox.mapboxsdk.style.layers.PropertyValue
+import com.mapbox.mapboxsdk.style.layers.SymbolLayer
+import com.mapbox.mapboxsdk.style.layers.TransitionOptions
 import com.mapbox.maps.*
-import com.mapbox.maps.extension.localization.localizeLabels
 import com.mapbox.maps.extension.style.layers.properties.generated.ProjectionName
 import com.mapbox.maps.extension.style.projection.generated.Projection
 import com.mapbox.maps.extension.style.projection.generated.getProjection
 import com.mapbox.maps.extension.style.projection.generated.setProjection
 import com.mapbox.maps.pigeons.FLTMapInterfaces
 import java.nio.ByteBuffer
-import java.util.Locale
+import java.util.*
+
 
 class StyleController(private val mapboxMap: MapboxMap) : FLTMapInterfaces.StyleManager {
+
+  private val interactiveFeatureLayerIds: Set<String>? = mutableSetOf<String>()
   override fun getStyleURI(result: FLTMapInterfaces.Result<String>) {
     mapboxMap.getStyle {
-      result.success(it.styleURI)
+      result.success(it.uri)
     }
   }
 
   override fun setStyleURI(uri: String, result: FLTMapInterfaces.Result<Void>) {
-    mapboxMap.getStyle {
-      it.styleURI = uri
+    /*mapboxMap.getStyle {
+      it.se
       result.success(null)
-    }
+    }*/
+    mapboxMap?.setStyle(uri)
+    result.success(null)
   }
 
   override fun getStyleJSON(result: FLTMapInterfaces.Result<String>) {
     mapboxMap.getStyle {
-      result.success(it.styleJSON)
+      result.success(it.json)
     }
   }
 
   override fun setStyleJSON(json: String, result: FLTMapInterfaces.Result<Void>) {
-    mapboxMap.getStyle {
-      it.styleJSON = json
-      result.success(null)
-    }
+    mapboxMap?.setStyle(json)
+    result.success(null)
   }
 
   override fun getStyleDefaultCamera(result: FLTMapInterfaces.Result<FLTMapInterfaces.CameraOptions>?) {
     mapboxMap.getStyle {
-      val camera = it.styleDefaultCamera
+      val camera = mapboxMap.cameraPosition
       result?.success(camera.toFLTCameraOptions())
     }
   }
 
   override fun getStyleTransition(result: FLTMapInterfaces.Result<FLTMapInterfaces.TransitionOptions>) {
     mapboxMap.getStyle {
-      val transitionOptions = it.styleTransition
+      val transitionOptions = it.transition
       result.success(
         FLTMapInterfaces.TransitionOptions.Builder().setDelay(transitionOptions.delay)
           .setDuration(transitionOptions.duration)
-          .setEnablePlacementTransitions(transitionOptions.enablePlacementTransitions)
+          .setEnablePlacementTransitions(transitionOptions.isEnablePlacementTransitions)
           .build()
       )
     }
@@ -65,35 +73,75 @@ class StyleController(private val mapboxMap: MapboxMap) : FLTMapInterfaces.Style
     result: FLTMapInterfaces.Result<Void>
   ) {
     mapboxMap.getStyle {
-      it.styleTransition = TransitionOptions.Builder().delay(transitionOptions.delay)
-        .duration(transitionOptions.duration)
-        .enablePlacementTransitions(transitionOptions.enablePlacementTransitions).build()
+
+      it.transition = TransitionOptions( transitionOptions.duration as Long,transitionOptions.delay as Long,transitionOptions.enablePlacementTransitions as Boolean)
+
+
       result.success(null)
     }
   }
+
+
+  private fun addSymbolLayer(
+    layerName: String,
+    sourceName: String,
+    belowLayerId: String?,
+    sourceLayer: String?,
+    minZoom: Float?,
+    maxZoom: Float?,
+    properties: Array<PropertyValue<*>>,
+    enableInteraction: Boolean,
+    filter: Expression?
+  ) {
+    mapboxMap.getStyle {
+      val symbolLayer = SymbolLayer(layerName, sourceName)
+      symbolLayer.setProperties(*properties)
+      if (sourceLayer != null) {
+        symbolLayer.setSourceLayer(sourceLayer)
+      }
+      if (minZoom != null) {
+        symbolLayer.minZoom = minZoom
+      }
+      if (maxZoom != null) {
+        symbolLayer.maxZoom = maxZoom
+      }
+      if (filter != null) {
+        symbolLayer.setFilter(filter)
+      }
+      if (belowLayerId != null) {
+        it.addLayerBelow(symbolLayer, belowLayerId)
+      } else {
+        it.addLayer(symbolLayer)
+      }
+      if (enableInteraction) {
+        interactiveFeatureLayerIds?.toSet(layerName)
+        interactiveFeatureLayerIds?.toMutableSet(layerName)
+      }
+
+    }
+
+  }
+
 
   override fun addStyleLayer(
     properties: String,
     layerPosition: FLTMapInterfaces.LayerPosition?,
     result: FLTMapInterfaces.Result<Void>
   ) {
-    mapboxMap.getStyle {
-      properties.toValue().let { parameters ->
-        val expected = it.addStyleLayer(
-          parameters,
-          LayerPosition(
-            layerPosition?.above,
-            layerPosition?.below,
-            layerPosition?.at?.toInt()
-          )
-        )
-        if (expected.isError) {
-          result.error(Throwable(expected.error))
-        } else {
-          result.success(null)
-        }
+    /*mapboxMap.getStyle {
+
+      val expected = it.addLayer(
+        Layer
+      )
+      if (expected.isError) {
+        result.error(Throwable(expected.error))
+      } else {
+        result.success(null)
       }
-    }
+      properties.toValue().let { parameters ->
+
+      }
+    }*/
   }
 
   override fun addPersistentStyleLayer(
